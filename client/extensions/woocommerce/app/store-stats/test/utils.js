@@ -21,7 +21,6 @@ import {
 	getStartPeriod,
 	getQueryDate,
 	getUnitPeriod,
-	sortAndTrimReferrerData,
 } from '../utils';
 
 describe( 'calculateDelta', () => {
@@ -476,43 +475,6 @@ describe( 'getProductConversionRateData', () => {
 				addToCarts: 0,
 				productPurchases: 0,
 			},
-		] );
-	} );
-} );
-
-const referrerData = [
-	{
-		date: '2018-03',
-		data: [
-			{ referrer: 'facebook.com', product_views: 649, sales: 40 },
-			{ referrer: 'organic', product_views: 5178, sales: 514 },
-			{ referrer: 'mail.yahoo.com', product_views: 50, sales: 2 },
-			{ referrer: 'google.com', product_views: 26, sales: 5 },
-			{ referrer: 'wordpress.com', product_views: 10, sales: 0 },
-			{ referrer: 'instagram.com', product_views: 52, sales: 4 },
-		],
-	},
-];
-
-describe( 'sortAndTrimReferrerData', () => {
-	test( 'should return an Array', () => {
-		const data = sortAndTrimReferrerData( referrerData, '2018-03' );
-		assert.isArray( data );
-	} );
-	test( 'should return empty for a date that does not exist', () => {
-		const data = sortAndTrimReferrerData( referrerData, '2018-02' );
-		expect( data ).to.eql( [] );
-	} );
-	test( 'should return 5 results by default', () => {
-		const data = sortAndTrimReferrerData( referrerData, '2018-03' );
-		assert.equal( data.length, 5 );
-	} );
-	test( 'should sort and trim', () => {
-		const data = sortAndTrimReferrerData( referrerData, '2018-03', 3 );
-		expect( data ).to.eql( [
-			{ referrer: 'organic', product_views: 5178, sales: 514 },
-			{ referrer: 'facebook.com', product_views: 649, sales: 40 },
-			{ referrer: 'google.com', product_views: 26, sales: 5 },
 		] );
 	} );
 } );

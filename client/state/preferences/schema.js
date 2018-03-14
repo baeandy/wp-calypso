@@ -75,7 +75,7 @@ export const remoteValuesSchema = {
 			type: 'string',
 			enum: [ 'default', 'light', 'dark' ],
 		},
-		'store-dashboardStatsWidgetTimePeriod': {
+		'store-dashboardStatsWidgetUnit': {
 			type: 'string',
 			enum: [ 'day', 'week', 'month' ],
 		},

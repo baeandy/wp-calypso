@@ -1,31 +1,39 @@
+/** @format */
+
 /**
  * External dependencies
- *
- * @format
  */
 import React, { Component, Fragment } from 'react';
 import { bindActionCreators } from 'redux';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { moment, localize } from 'i18n-calypso';
+import { sortBy, find } from 'lodash';
 
 /**
  * Internal dependencies
  */
+import { dashboardListLimit } from 'woocommerce/app/store-stats/constants';
 import DashboardWidget from 'woocommerce/components/dashboard-widget';
 import { getLink } from 'woocommerce/lib/nav-utils';
 import { getPreference } from 'state/preferences/selectors';
 import { getSelectedSiteWithFallback } from 'woocommerce/state/sites/selectors';
+import { getSiteStatsNormalizedData } from 'state/stats/lists/selectors';
+import { getQueries } from './queries';
+import {
+	getUnitPeriod,
+	getStartPeriod,
+	getDelta,
+	getDeltaFromData,
+	getEndPeriod,
+	getProductConversionRateData,
+} from 'woocommerce/app/store-stats/utils';
 import List from './list';
 import QueryPreferences from 'components/data/query-preferences';
 import QuerySiteStats from 'components/data/query-site-stats';
 import { savePreference } from 'state/preferences/actions';
 import SelectDropdown from 'components/select-dropdown';
 import Stat from './stat';
-import ConversionRate from './conversion-rate';
-
-import { getUnitPeriod, getStartDate } from 'woocommerce/app/store-stats/utils';
-import { UNITS, dashboardListLimit } from 'woocommerce/app/store-stats/constants';
 
 class StatsWidget extends Component {
 	static propTypes = {
@@ -33,19 +41,27 @@ class StatsWidget extends Component {
 			name: PropTypes.string.isRequired,
 			slug: PropTypes.string.isRequired,
 		} ),
+		unit: PropTypes.string,
+		queries: PropTypes.object,
+		orderData: PropTypes.object,
+		referrerData: PropTypes.array,
+		topEarnersData: PropTypes.array,
+		visitorData: PropTypes.array,
+		productData: PropTypes.array,
+		saveDashboardUnit: PropTypes.func,
 	};
 
 	handleTimePeriodChange = option => {
-		const { saveDashboardTimePeriod } = this.props;
-		saveDashboardTimePeriod( option.value );
+		const { saveDashboardUnit } = this.props;
+		saveDashboardUnit( option.value );
 	};
 
 	dateForDisplay = () => {
-		const { translate, dashboardTimePeriod } = this.props;
+		const { translate, unit } = this.props;
 
 		const localizedDate = moment( moment().format( 'YYYY-MM-DD' ) );
 		let formattedDate;
-		switch ( dashboardTimePeriod ) {
+		switch ( unit ) {
 			case 'week':
 				formattedDate = translate( '%(startDate)s - %(endDate)s', {
 					context: 'Date range for which stats are being displayed',
@@ -80,7 +96,7 @@ class StatsWidget extends Component {
 	};
 
 	renderTitle = () => {
-		const { site, translate, dashboardTimePeriod } = this.props;
+		const { site, translate, unit } = this.props;
 
 		const options = [
 			{ value: 'day', label: 'day' },
@@ -99,7 +115,7 @@ class StatsWidget extends Component {
 							timePeriodSelector: (
 								<SelectDropdown
 									options={ options }
-									initialSelected={ dashboardTimePeriod }
+									initialSelected={ unit }
 									onSelect={ this.handleTimePeriodChange }
 								/>
 							),
@@ -114,40 +130,62 @@ class StatsWidget extends Component {
 	};
 
 	renderOrders = () => {
-		const { site, translate, dashboardTimePeriod } = this.props;
+		const { site, translate, unit, orderData } = this.props;
+		const date = getEndPeriod( moment().format( 'YYYY-MM-DD' ), unit );
+		const delta =
+			( orderData &&
+				orderData.deltas &&
+				orderData.deltas.length &&
+				getDelta( orderData.deltas, date, 'orders' ) ) ||
+			{};
 		return (
 			<Stat
 				site={ site }
-				unit={ dashboardTimePeriod }
 				label={ translate( 'Orders' ) }
 				stat="statsOrders"
 				attribute="orders"
+				data={ ( orderData && orderData.data ) || [] }
+				delta={ delta }
+				date={ date }
 				type="number"
 			/>
 		);
 	};
 
 	renderSales = () => {
-		const { site, translate, dashboardTimePeriod } = this.props;
+		const { site, translate, unit, orderData } = this.props;
+		const date = getEndPeriod( moment().format( 'YYYY-MM-DD' ), unit );
+		const delta =
+			( orderData &&
+				orderData.deltas &&
+				orderData.deltas.length &&
+				getDelta( orderData.deltas, date, 'total_sales' ) ) ||
+			{};
 		return (
 			<Stat
 				site={ site }
-				unit={ dashboardTimePeriod }
 				label={ translate( 'Sales' ) }
 				stat="statsOrders"
 				attribute="total_sales"
+				data={ ( orderData && orderData.data ) || [] }
+				delta={ delta }
+				date={ date }
 				type="currency"
 			/>
 		);
 	};
 
 	renderVisitors = () => {
-		const { site, translate, dashboardTimePeriod } = this.props;
+		const { site, translate, unit, visitorData } = this.props;
+		const date = getStartPeriod( moment().format( 'YYYY-MM-DD' ), unit );
+		const delta = getDeltaFromData( visitorData, date, 'visitors', unit );
 		return (
 			<Stat
 				site={ site }
-				unit={ dashboardTimePeriod }
 				label={ translate( 'Visitors' ) }
+				data={ visitorData || [] }
+				delta={ delta }
+				date={ date }
 				stat="statsVisits"
 				attribute="visitors"
 				type="number"
@@ -156,14 +194,31 @@ class StatsWidget extends Component {
 	};
 
 	renderConversionRate = () => {
-		const { site, dashboardTimePeriod } = this.props;
+		const { site, translate, unit, visitorData, productData } = this.props;
+		const date = getUnitPeriod( moment().format( 'YYYY-MM-DD' ), unit );
+		const data = getProductConversionRateData( visitorData, productData, unit );
+		const delta = getDeltaFromData( data, date, 'productPurchases', unit );
 		return (
-			<ConversionRate site={ site } unit={ dashboardTimePeriod } attribute="productPurchases" />
+			<Stat
+				site={ site }
+				label={ translate( 'Conversion rate' ) }
+				data={ data || [] }
+				delta={ delta }
+				date={ date }
+				stat="statsVisits"
+				attribute="productPurchases"
+				type="percent"
+			/>
 		);
 	};
 
 	renderReferrers = () => {
-		const { site, translate, dashboardTimePeriod } = this.props;
+		const { site, translate, unit, referrerData, queries } = this.props;
+		const { referrerQuery } = queries;
+
+		const row = find( referrerData, d => d.date === referrerQuery.date );
+		const fetchedData =
+			( row && sortBy( row.data, r => -r.sales ).slice( 0, dashboardListLimit ) ) || [];
 
 		const values = [
 			{ key: 'referrer', title: translate( 'Referrer' ), format: 'text' },
@@ -176,16 +231,18 @@ class StatsWidget extends Component {
 				site={ site }
 				statSlug="referrers"
 				statType="statsStoreReferrers"
-				unit={ dashboardTimePeriod }
+				unit={ unit }
 				values={ values }
+				query={ referrerQuery }
+				fetchedData={ fetchedData }
 				emptyMessage={ translate( 'No referral activity has been recorded for this time period.' ) }
 			/>
 		);
 	};
 
 	renderProducts = () => {
-		const { site, translate, dashboardTimePeriod } = this.props;
-
+		const { site, translate, unit, topEarnersData, queries } = this.props;
+		const { topEarnersQuery } = queries;
 		const values = [
 			{ key: 'name', title: translate( 'Product' ), format: 'text' },
 			{ key: 'total', title: translate( 'Sales' ), format: 'currency' },
@@ -196,64 +253,37 @@ class StatsWidget extends Component {
 				site={ site }
 				statSlug="products"
 				statType="statsTopEarners"
-				unit={ dashboardTimePeriod }
+				unit={ unit }
 				values={ values }
+				query={ topEarnersQuery }
+				fetchedData={ topEarnersData }
 				emptyMessage={ translate( 'No products have been sold in this time period.' ) }
 			/>
 		);
 	};
 
-	queries = () => {
-		const { site, dashboardTimePeriod } = this.props;
-
-		const unitOrderAndReferrerDate = getUnitPeriod(
-			getStartDate( moment().format( 'YYYY-MM-DD' ), dashboardTimePeriod ),
-			dashboardTimePeriod
-		);
-
-		const orderQuery = {
-			unit: dashboardTimePeriod,
-			date: unitOrderAndReferrerDate,
-			quantity: UNITS[ dashboardTimePeriod ].quantity, // TODO is this requesting too Much?
-		};
-
-		const referrerQuery = {
-			unit: dashboardTimePeriod,
-			date: unitOrderAndReferrerDate,
-			quantity: 1,
-		};
-
-		const productEventsQuery = {
-			unit: dashboardTimePeriod,
-			date: unitOrderAndReferrerDate,
-			quantity: UNITS[ dashboardTimePeriod ].quantity,
-		};
-
-		const unitDate = getUnitPeriod( moment().format( 'YYYY-MM-DD' ), dashboardTimePeriod );
-		const query = {
-			unit: dashboardTimePeriod,
-			date: unitDate,
-			limit: dashboardListLimit,
-		};
-
-		const visitorQuery = {
-			unit: dashboardTimePeriod,
-			date: moment().format( 'YYYY-MM-DD' ),
-			quantity: UNITS[ dashboardTimePeriod ].quantity, // TODO is this requesting too Much? 2 for delta is needed
-		};
-
+	queryData = () => {
+		const { site, queries } = this.props;
 		return (
 			<Fragment>
 				<QueryPreferences />
-				<QuerySiteStats statType="statsOrders" siteId={ site.ID } query={ orderQuery } />
-				<QuerySiteStats statType="statsTopEarners" siteId={ site.ID } query={ query } />
-				<QuerySiteStats statType="statsStoreReferrers" siteId={ site.ID } query={ referrerQuery } />
+				<QuerySiteStats statType="statsOrders" siteId={ site.ID } query={ queries.orderQuery } />
+				<QuerySiteStats
+					statType="statsTopEarners"
+					siteId={ site.ID }
+					query={ queries.topEarnersQuery }
+				/>
+				<QuerySiteStats
+					statType="statsStoreReferrers"
+					siteId={ site.ID }
+					query={ queries.referrerQuery }
+				/>
 				<QuerySiteStats
 					statType="statsStoreProductEvents"
 					siteId={ site.ID }
-					query={ productEventsQuery }
+					query={ queries.productQuery }
 				/>
-				<QuerySiteStats statType="statsVisits" siteId={ site.ID } query={ visitorQuery } />
+				<QuerySiteStats statType="statsVisits" siteId={ site.ID } query={ queries.visitorQuery } />
 			</Fragment>
 		);
 	};
@@ -262,7 +292,7 @@ class StatsWidget extends Component {
 		const { site, translate } = this.props;
 		return (
 			<div className="stats-widget">
-				{ this.queries() }
+				{ this.queryData() }
 				<DashboardWidget title={ this.renderTitle() }>
 					<div className="stats-widget__boxes">
 						{ this.renderOrders() }
@@ -291,18 +321,52 @@ class StatsWidget extends Component {
 
 function mapStateToProps( state ) {
 	const site = getSelectedSiteWithFallback( state );
-	const dashboardTimePeriod = getPreference( state, 'store-dashboardStatsWidgetTimePeriod' );
+	const unit = getPreference( state, 'store-dashboardStatsWidgetUnit' );
+
+	const queries = getQueries( unit );
+
+	const orderData = getSiteStatsNormalizedData( state, site.ID, 'statsOrders', queries.orderQuery );
+	const visitorData = getSiteStatsNormalizedData(
+		state,
+		site.ID,
+		'statsVisits',
+		queries.visitorQuery
+	);
+	const productData = getSiteStatsNormalizedData(
+		state,
+		site.ID,
+		'statsStoreProductEvents',
+		queries.productQuery
+	);
+	const topEarnersData = getSiteStatsNormalizedData(
+		state,
+		site.ID,
+		'statsTopEarners',
+		queries.topEarnersQuery
+	);
+	const referrerData = getSiteStatsNormalizedData(
+		state,
+		site.ID,
+		'statsStoreReferrers',
+		queries.referrerQuery
+	);
+
 	return {
 		site,
-		dashboardTimePeriod,
+		unit,
+		queries,
+		orderData,
+		referrerData,
+		topEarnersData,
+		visitorData,
+		productData,
 	};
 }
 
 function mapDispatchToProps( dispatch ) {
 	return bindActionCreators(
 		{
-			saveDashboardTimePeriod: value =>
-				savePreference( 'store-dashboardStatsWidgetTimePeriod', value ),
+			saveDashboardUnit: value => savePreference( 'store-dashboardStatsWidgetUnit', value ),
 		},
 		dispatch
 	);

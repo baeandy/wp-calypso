@@ -4,7 +4,7 @@
  * External dependencies
  */
 
-import { find, includes, sortBy, forEach, sumBy, round } from 'lodash';
+import { find, includes, forEach, sumBy, round } from 'lodash';
 import classnames from 'classnames';
 import { moment } from 'i18n-calypso';
 
@@ -232,17 +232,4 @@ export function getProductConversionRateData( visitorData, actionData, unit ) {
 		}
 		return { period: datePeriod, addToCarts: 0, productPurchases: 0 };
 	} );
-}
-
-/**
- * Given referrer data, and a selected date, sort referrers by sales and return based on limit.
- *
- * @param {array} data -  an array of API data from the 'events-by-referrer' endpoint
- * @param {string} date - string of date
- * @param {number} limit - Number of items to limit by, default 5.
- * @return {array} - Array of ordered referrer rows
- */
-export function sortAndTrimReferrerData( data, date, limit = 5 ) {
-	const row = find( data, d => d.date === date );
-	return ( row && sortBy( row.data, r => -r.sales ).slice( 0, limit ) ) || [];
 }
