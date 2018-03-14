@@ -38,6 +38,11 @@ export function getPlans() {
 }
 
 export function getPlan( planKey ) {
+	if ( Object.prototype.toString.apply( planKey ) === '[object Object]' ) {
+		if ( values( PLANS_LIST ).indexOf( planKey ) !== -1 ) {
+			return planKey;
+		}
+	}
 	return PLANS_LIST[ planKey ];
 }
 
@@ -171,7 +176,7 @@ export function filterPlansBySiteAndProps(
  * @return {String}          Monthly version slug or "" if the slug could not be converted.
  */
 export function getMonthlyPlanByYearly( planSlug ) {
-	return findSimilarPlan( planSlug, { term: TERM_MONTHLY } );
+	return findSimilarPlanKey( planSlug, { term: TERM_MONTHLY } );
 }
 
 /**
@@ -182,7 +187,7 @@ export function getMonthlyPlanByYearly( planSlug ) {
  * @return {String}          Yearly version slug or "" if the slug could not be converted.
  */
 export function getYearlyPlanByMonthly( planSlug ) {
-	return findSimilarPlan( planSlug, { term: TERM_ANNUALLY } );
+	return findSimilarPlanKey( planSlug, { term: TERM_ANNUALLY } );
 }
 
 /**
@@ -220,6 +225,17 @@ export function isFreePlan( planSlug ) {
 }
 
 /**
+ * @see findSimilarPlanKey
+ *
+ * @param {string|object} planKey Source plan to compare to
+ * @param {object} diff Properties that should differ in matched plan. @see planMatches
+ * @return {object|null} Matched plan
+ */
+export function findSimilarPlan( planKey, diff ) {
+	return getPlan( findSimilarPlanKey( planKey, diff ) );
+}
+
+/**
  * A similar plan is one that has the same `type`, `group`, and `term` as first
  * argument, except for differences specified in the second argument.
  *
@@ -232,14 +248,15 @@ export function isFreePlan( planSlug ) {
  * @param {object} diff Properties that should differ in matched plan. @see planMatches
  * @return {object|null} Matched plan
  */
-export function findSimilarPlan( planKey, diff = {} ) {
+export function findSimilarPlanKey( planKey, diff = {} ) {
 	const plan = getPlan( planKey );
 	const query = {
 		...pick( plan, 'type', 'group', 'term' ),
 		...diff,
 	};
 
-	return values( getPlans() ).filter( p => planMatches( p, query ) )[ 0 ];
+	const plans = getPlans();
+	return Object.keys( plans ).filter( k => planMatches( plans[ k ], query ) )[ 0 ] || '';
 }
 
 /**

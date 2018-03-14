@@ -29,8 +29,231 @@ import {
 	TERM_MONTHLY,
 	TYPE_BUSINESS,
 	TYPE_PERSONAL,
+	PLANS_LIST,
+	TYPE_PREMIUM,
+	TYPE_FREE,
 } from '../constants';
-import { isBusinessPlan, isPersonalPlan, isPremiumPlan, planMatches } from '../index';
+import {
+	getPlan,
+	isBusinessPlan,
+	isPersonalPlan,
+	isPremiumPlan,
+	planMatches,
+	findSimilarPlanKey,
+} from '../index';
+
+describe( 'getPlan', () => {
+	test( 'should return a proper plan - by key', () => {
+		expect( getPlan( PLAN_PERSONAL ) ).to.be.equal( PLANS_LIST[ PLAN_PERSONAL ] );
+	} );
+
+	test( 'should return a proper plan - by value', () => {
+		expect( getPlan( PLANS_LIST[ PLAN_PERSONAL ] ) ).to.be.equal( PLANS_LIST[ PLAN_PERSONAL ] );
+	} );
+
+	test( 'should return undefined for invalid plan - by key', () => {
+		expect( getPlan( 'test' ) ).to.be.equal( undefined );
+	} );
+
+	test( 'should return undefined for invalid plan - by value', () => {
+		expect( getPlan( {} ) ).to.be.equal( undefined );
+	} );
+} );
+
+describe( 'findSimilarPlanKey', () => {
+	test( 'should return a proper similar plan - by term', () => {
+		expect( findSimilarPlanKey( PLAN_PERSONAL, { term: TERM_BIENNIALLY } ) ).to.be.equal(
+			PLAN_PERSONAL_2_YEARS
+		);
+		expect( findSimilarPlanKey( PLAN_PREMIUM, { term: TERM_BIENNIALLY } ) ).to.be.equal(
+			PLAN_PREMIUM_2_YEARS
+		);
+		expect( findSimilarPlanKey( PLAN_BUSINESS, { term: TERM_BIENNIALLY } ) ).to.be.equal(
+			PLAN_BUSINESS_2_YEARS
+		);
+
+		expect( findSimilarPlanKey( PLAN_PREMIUM_2_YEARS, { term: TERM_ANNUALLY } ) ).to.be.equal(
+			PLAN_PREMIUM
+		);
+		expect( findSimilarPlanKey( PLAN_PERSONAL_2_YEARS, { term: TERM_ANNUALLY } ) ).to.be.equal(
+			PLAN_PERSONAL
+		);
+		expect( findSimilarPlanKey( PLAN_BUSINESS_2_YEARS, { term: TERM_ANNUALLY } ) ).to.be.equal(
+			PLAN_BUSINESS
+		);
+
+		expect( findSimilarPlanKey( PLAN_JETPACK_PERSONAL, { term: TERM_MONTHLY } ) ).to.be.equal(
+			PLAN_JETPACK_PERSONAL_MONTHLY
+		);
+		expect( findSimilarPlanKey( PLAN_JETPACK_PERSONAL, { term: TERM_BIENNIALLY } ) ).to.be.equal(
+			''
+		);
+		expect( findSimilarPlanKey( PLAN_JETPACK_PREMIUM, { term: TERM_MONTHLY } ) ).to.be.equal(
+			PLAN_JETPACK_PREMIUM_MONTHLY
+		);
+		expect( findSimilarPlanKey( PLAN_JETPACK_PREMIUM, { term: TERM_BIENNIALLY } ) ).to.be.equal(
+			''
+		);
+		expect( findSimilarPlanKey( PLAN_JETPACK_BUSINESS, { term: TERM_MONTHLY } ) ).to.be.equal(
+			PLAN_JETPACK_BUSINESS_MONTHLY
+		);
+		expect( findSimilarPlanKey( PLAN_JETPACK_BUSINESS, { term: TERM_BIENNIALLY } ) ).to.be.equal(
+			''
+		);
+
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PERSONAL_MONTHLY, { term: TERM_ANNUALLY } )
+		).to.be.equal( PLAN_JETPACK_PERSONAL );
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PREMIUM_MONTHLY, { term: TERM_ANNUALLY } )
+		).to.be.equal( PLAN_JETPACK_PREMIUM );
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_BUSINESS_MONTHLY, { term: TERM_ANNUALLY } )
+		).to.be.equal( PLAN_JETPACK_BUSINESS );
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_BUSINESS_MONTHLY, { term: TERM_BIENNIALLY } )
+		).to.be.equal( '' );
+	} );
+
+	test( 'should return a proper similar plan - by type and group - wp.com', () => {
+		expect(
+			findSimilarPlanKey( PLAN_PERSONAL, { type: TYPE_BUSINESS, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_BUSINESS );
+		expect(
+			findSimilarPlanKey( PLAN_PERSONAL, { type: TYPE_PREMIUM, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_PREMIUM );
+
+		expect(
+			findSimilarPlanKey( PLAN_PREMIUM, { type: TYPE_BUSINESS, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_BUSINESS );
+		expect(
+			findSimilarPlanKey( PLAN_PREMIUM, { type: TYPE_PERSONAL, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_PERSONAL );
+
+		expect(
+			findSimilarPlanKey( PLAN_BUSINESS, { type: TYPE_PREMIUM, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_PREMIUM );
+		expect(
+			findSimilarPlanKey( PLAN_BUSINESS, { type: TYPE_PERSONAL, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_PERSONAL );
+
+		expect(
+			findSimilarPlanKey( PLAN_PERSONAL_2_YEARS, { type: TYPE_BUSINESS, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_BUSINESS_2_YEARS );
+		expect(
+			findSimilarPlanKey( PLAN_PERSONAL_2_YEARS, { type: TYPE_PREMIUM, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_PREMIUM_2_YEARS );
+
+		expect(
+			findSimilarPlanKey( PLAN_PREMIUM_2_YEARS, { type: TYPE_BUSINESS, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_BUSINESS_2_YEARS );
+		expect(
+			findSimilarPlanKey( PLAN_PREMIUM_2_YEARS, { type: TYPE_PERSONAL, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_PERSONAL_2_YEARS );
+
+		expect(
+			findSimilarPlanKey( PLAN_BUSINESS_2_YEARS, { type: TYPE_PREMIUM, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_PREMIUM_2_YEARS );
+		expect(
+			findSimilarPlanKey( PLAN_BUSINESS_2_YEARS, { type: TYPE_PERSONAL, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_PERSONAL_2_YEARS );
+		expect(
+			findSimilarPlanKey( PLAN_BUSINESS_2_YEARS, { type: TYPE_FREE, group: GROUP_WPCOM } )
+		).to.be.equal( '' );
+	} );
+
+	test( 'should return a proper similar plan - by type and group - jetpack', () => {
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PERSONAL, { type: TYPE_BUSINESS, group: GROUP_JETPACK } )
+		).to.be.equal( PLAN_JETPACK_BUSINESS );
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PERSONAL, { type: TYPE_PREMIUM, group: GROUP_JETPACK } )
+		).to.be.equal( PLAN_JETPACK_PREMIUM );
+
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PREMIUM, { type: TYPE_BUSINESS, group: GROUP_JETPACK } )
+		).to.be.equal( PLAN_JETPACK_BUSINESS );
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PREMIUM, { type: TYPE_PERSONAL, group: GROUP_JETPACK } )
+		).to.be.equal( PLAN_JETPACK_PERSONAL );
+
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_BUSINESS, { type: TYPE_PREMIUM, group: GROUP_JETPACK } )
+		).to.be.equal( PLAN_JETPACK_PREMIUM );
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_BUSINESS, { type: TYPE_PERSONAL, group: GROUP_JETPACK } )
+		).to.be.equal( PLAN_JETPACK_PERSONAL );
+
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PERSONAL_MONTHLY, {
+				type: TYPE_BUSINESS,
+				group: GROUP_JETPACK,
+			} )
+		).to.be.equal( PLAN_JETPACK_BUSINESS_MONTHLY );
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PERSONAL_MONTHLY, {
+				type: TYPE_PREMIUM,
+				group: GROUP_JETPACK,
+			} )
+		).to.be.equal( PLAN_JETPACK_PREMIUM_MONTHLY );
+
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PREMIUM_MONTHLY, {
+				type: TYPE_BUSINESS,
+				group: GROUP_JETPACK,
+			} )
+		).to.be.equal( PLAN_JETPACK_BUSINESS_MONTHLY );
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PREMIUM_MONTHLY, {
+				type: TYPE_PERSONAL,
+				group: GROUP_JETPACK,
+			} )
+		).to.be.equal( PLAN_JETPACK_PERSONAL_MONTHLY );
+
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_BUSINESS_MONTHLY, {
+				type: TYPE_PREMIUM,
+				group: GROUP_JETPACK,
+			} )
+		).to.be.equal( PLAN_JETPACK_PREMIUM_MONTHLY );
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_BUSINESS_MONTHLY, {
+				type: TYPE_PERSONAL,
+				group: GROUP_JETPACK,
+			} )
+		).to.be.equal( PLAN_JETPACK_PERSONAL_MONTHLY );
+	} );
+
+	test( 'should return a proper similar plan - by type and group - wp.com / jetpack', () => {
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PERSONAL, { type: TYPE_BUSINESS, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_BUSINESS );
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PERSONAL, { type: TYPE_PREMIUM, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_PREMIUM );
+
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PREMIUM, { type: TYPE_BUSINESS, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_BUSINESS );
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PREMIUM, { type: TYPE_PERSONAL, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_PERSONAL );
+
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_BUSINESS, { type: TYPE_PREMIUM, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_PREMIUM );
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_BUSINESS, { type: TYPE_PERSONAL, group: GROUP_WPCOM } )
+		).to.be.equal( PLAN_PERSONAL );
+
+		expect(
+			findSimilarPlanKey( PLAN_JETPACK_PERSONAL_MONTHLY, {
+				type: TYPE_BUSINESS,
+				group: GROUP_WPCOM,
+			} )
+		).to.be.equal( '' );
+	} );
+} );
 
 describe( 'isBusinessPlan', () => {
 	test( 'should return true for all business plans', () => {
