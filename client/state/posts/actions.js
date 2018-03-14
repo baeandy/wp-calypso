@@ -258,7 +258,37 @@ export function savePost( siteId, postId = null, post ) {
  * @return {Function}        Action thunk
  */
 export function trashPost( siteId, postId ) {
-	return savePost( siteId, postId, { status: 'trash' } );
+	return dispatch => {
+		const post = { status: 'trash' };
+
+		dispatch( {
+			type: POST_SAVE,
+			siteId,
+			postId,
+			post,
+		} );
+
+		const trashResult = wpcom
+			.site( siteId )
+			.post( postId )
+			.delete();
+
+		trashResult
+			.then( savedPost => {
+				dispatch( savePostSuccess( siteId, postId, savedPost, post ) );
+				dispatch( receivePost( savedPost ) );
+			} )
+			.catch( error => {
+				dispatch( {
+					type: POST_SAVE_FAILURE,
+					siteId,
+					postId,
+					error,
+				} );
+			} );
+
+		return trashResult;
+	};
 }
 
 /**
