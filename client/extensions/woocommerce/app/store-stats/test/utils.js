@@ -372,63 +372,48 @@ describe( 'getDeltaFromData', () => {
 	} );
 } );
 
-const productData = [
+const orderData = [
 	{
-		date: '2018-01',
-		data: [
-			{ product_id: 793, add_to_carts: 203, product_purchases: 8 },
-			{ product_id: 802, add_to_carts: 101, product_purchases: 10 },
-		],
+		period: '2018-01-31',
+		products: 18,
 	},
 	{
-		date: '2018-02',
-		data: [
-			{ product_id: 802, add_to_carts: 295, product_purchases: 12 },
-			{ product_id: 805, add_to_carts: 10, product_purchases: 1 },
-		],
+		period: '2018-02-28',
+		products: 13,
 	},
 	{
-		date: '2018-03',
-		data: [
-			{ product_id: 793, add_to_carts: 500, product_purchases: 100 },
-			{ product_id: 802, add_to_carts: 50, product_purchases: 10 },
-		],
+		period: '2018-03-31',
+		products: 110,
 	},
 ];
 
 describe( 'getProductConversionRateData', () => {
 	test( 'should return an Array', () => {
-		const data = getProductConversionRateData( visitorData, productData, 'month' );
+		const data = getProductConversionRateData( visitorData, orderData, 'month' );
 		assert.isArray( data );
 	} );
 	test( 'should return the correct conversion rate', () => {
-		const data = getProductConversionRateData( visitorData, productData, 'month' );
+		const data = getProductConversionRateData( visitorData, orderData, 'month' );
 		/*
 			2018-01
-				( total add to carts [203 + 101] ) / visitors [11735] ) * 100 = 2.59
-				( total product purchases [8 + 10] ) / visitors [11735] ) * 100 = 0.15
+				( product purcahses [18] ) / visitors [11735] ) * 100 = 0.15
 			2018-02
-				( total add to carts [295 + 10] ) / visitors [18513] ) * 100 = 1.65
-				( total product purchases [12 + 1 ] ) / visitors [18513] ) * 100 = 0.07
+				( product purchases [13] ) / visitors [18513] ) * 100 = 0.07
 			 2018-03
-			 	( total add to carts [295 + 10] ) / visitors [18513] ) * 100 = 1.65
-				( total product purchases [100 + 10 ] ) / visitors [21110] ) * 100 = 0.52
+				( product purchases [110 ] ) / visitors [21110] ) * 100 = 0.52
 		*/
 		expect( data ).to.eql( [
 			{
 				period: '2018-01',
-				addToCarts: 2.59,
-				productPurchases: 0.15,
+				conversionRate: 0.15,
 			},
 			{
 				period: '2018-02',
-				addToCarts: 1.65,
-				productPurchases: 0.07,
+				conversionRate: 0.07,
 			},
 			{
 				period: '2018-03',
-				addToCarts: 2.61,
-				productPurchases: 0.52,
+				conversionRate: 0.52,
 			},
 		] );
 	} );
@@ -438,22 +423,19 @@ describe( 'getProductConversionRateData', () => {
 			{ visitors: 18513, period: '2018-02-01' },
 			{ visitors: 21110, period: '2018-03-01' },
 		];
-		const data = getProductConversionRateData( _visitorData, productData, 'month' );
+		const data = getProductConversionRateData( _visitorData, orderData, 'month' );
 		expect( data ).to.eql( [
 			{
 				period: '2018-01',
-				addToCarts: 0,
-				productPurchases: 0,
+				conversionRate: 0,
 			},
 			{
 				period: '2018-02',
-				addToCarts: 1.65,
-				productPurchases: 0.07,
+				conversionRate: 0.07,
 			},
 			{
 				period: '2018-03',
-				addToCarts: 2.61,
-				productPurchases: 0.52,
+				conversionRate: 0.52,
 			},
 		] );
 	} );
@@ -462,18 +444,15 @@ describe( 'getProductConversionRateData', () => {
 		expect( data ).to.eql( [
 			{
 				period: '2018-01',
-				addToCarts: 0,
-				productPurchases: 0,
+				conversionRate: 0,
 			},
 			{
 				period: '2018-02',
-				addToCarts: 0,
-				productPurchases: 0,
+				conversionRate: 0,
 			},
 			{
 				period: '2018-03',
-				addToCarts: 0,
-				productPurchases: 0,
+				conversionRate: 0,
 			},
 		] );
 	} );

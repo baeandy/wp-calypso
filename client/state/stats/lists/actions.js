@@ -63,7 +63,6 @@ export function requestSiteStats( siteId, statType, query ) {
 				'statsTopCoupons',
 				'statsTopEarners',
 				'statsStoreReferrers',
-				'statsStoreProductEvents',
 			],
 			statType
 		);

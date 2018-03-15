@@ -4,7 +4,7 @@
  * External dependencies
  */
 
-import { find, includes, forEach, sumBy, round } from 'lodash';
+import { find, includes, forEach, findIndex, round } from 'lodash';
 import classnames from 'classnames';
 import { moment } from 'i18n-calypso';
 
@@ -206,30 +206,26 @@ export function getDeltaFromData( data, selectedDate, stat, unit ) {
 }
 
 /**
- * Given visitor data and event data, get a list conversion rate by period.
+ * Given visitor data and order data, get a list conversion rate by period.
  *
  * @param {array} visitorData - an array of API data from the 'visits' stat endpoint
- * @param {array} actionData -  an array of API data from the 'events-by-product' endpoint
+ * @param {array} orderData -  an array of API data from the orders endpoint
  * @param {string} unit - unit/period format for the data provided
  * @return {object} - Object containing data from calculateDelta
  */
-export function getProductConversionRateData( visitorData, actionData, unit ) {
+export function getProductConversionRateData( visitorData, orderData, unit ) {
 	return visitorData.map( visitorRow => {
-		const datePeriod = getUnitPeriod( visitorRow.period, unit );
-		const actionRows = find( actionData, action => action.date === datePeriod );
-		if ( visitorRow.visitors > 0 && actionRows && actionRows.data ) {
+		const datePeriod = getEndPeriod( visitorRow.period, unit );
+		const unitPeriod = getUnitPeriod( visitorRow.period, unit );
+		const index = findIndex( orderData, d => d.period === datePeriod );
+		const products = orderData[ index ] && orderData[ index ].products;
+
+		if ( visitorRow.visitors > 0 && orderData[ index ] ) {
 			return {
-				period: datePeriod,
-				addToCarts: round(
-					sumBy( actionRows.data, 'add_to_carts' ) / visitorRow.visitors * 100,
-					2
-				),
-				productPurchases: round(
-					sumBy( actionRows.data, 'product_purchases' ) / visitorRow.visitors * 100,
-					2
-				),
+				period: unitPeriod,
+				conversionRate: round( products / visitorRow.visitors * 100, 2 ),
 			};
 		}
-		return { period: datePeriod, addToCarts: 0, productPurchases: 0 };
+		return { period: unitPeriod, conversionRate: 0 };
 	} );
 }

@@ -194,10 +194,10 @@ class StatsWidget extends Component {
 	};
 
 	renderConversionRate = () => {
-		const { site, translate, unit, visitorData, productData } = this.props;
+		const { site, translate, unit, visitorData, orderData } = this.props;
 		const date = getUnitPeriod( moment().format( 'YYYY-MM-DD' ), unit );
-		const data = getProductConversionRateData( visitorData, productData, unit );
-		const delta = getDeltaFromData( data, date, 'productPurchases', unit );
+		const data = getProductConversionRateData( visitorData, orderData.data, unit );
+		const delta = getDeltaFromData( data, date, 'conversionRate', unit );
 		return (
 			<Stat
 				site={ site }
@@ -205,8 +205,8 @@ class StatsWidget extends Component {
 				data={ data || [] }
 				delta={ delta }
 				date={ date }
-				stat="statsVisits"
-				attribute="productPurchases"
+				stat="statsProducts"
+				attribute="conversionRate"
 				type="percent"
 			/>
 		);
@@ -226,6 +226,13 @@ class StatsWidget extends Component {
 			{ key: 'sales', title: translate( 'Sales' ), format: 'currency' },
 		];
 
+		const emptyMessage =
+			'day' === unit
+				? translate(
+						'Data is being processed. Switch to the week or month view to see your latest referrers.'
+					)
+				: translate( 'No referral activity has been recorded for this time period.' );
+
 		return (
 			<List
 				site={ site }
@@ -235,7 +242,7 @@ class StatsWidget extends Component {
 				values={ values }
 				query={ referrerQuery }
 				fetchedData={ fetchedData }
-				emptyMessage={ translate( 'No referral activity has been recorded for this time period.' ) }
+				emptyMessage={ emptyMessage }
 			/>
 		);
 	};
@@ -264,26 +271,14 @@ class StatsWidget extends Component {
 
 	queryData = () => {
 		const { site, queries } = this.props;
+		const { orderQuery, topEarnersQuery, referrerQuery, visitorQuery } = queries;
 		return (
 			<Fragment>
 				<QueryPreferences />
-				<QuerySiteStats statType="statsOrders" siteId={ site.ID } query={ queries.orderQuery } />
-				<QuerySiteStats
-					statType="statsTopEarners"
-					siteId={ site.ID }
-					query={ queries.topEarnersQuery }
-				/>
-				<QuerySiteStats
-					statType="statsStoreReferrers"
-					siteId={ site.ID }
-					query={ queries.referrerQuery }
-				/>
-				<QuerySiteStats
-					statType="statsStoreProductEvents"
-					siteId={ site.ID }
-					query={ queries.productQuery }
-				/>
-				<QuerySiteStats statType="statsVisits" siteId={ site.ID } query={ queries.visitorQuery } />
+				<QuerySiteStats statType="statsOrders" siteId={ site.ID } query={ orderQuery } />
+				<QuerySiteStats statType="statsTopEarners" siteId={ site.ID } query={ topEarnersQuery } />
+				<QuerySiteStats statType="statsStoreReferrers" siteId={ site.ID } query={ referrerQuery } />
+				<QuerySiteStats statType="statsVisits" siteId={ site.ID } query={ visitorQuery } />
 			</Fragment>
 		);
 	};
@@ -324,31 +319,21 @@ function mapStateToProps( state ) {
 	const unit = getPreference( state, 'store-dashboardStatsWidgetUnit' );
 
 	const queries = getQueries( unit );
+	const { orderQuery, topEarnersQuery, referrerQuery, visitorQuery } = queries;
 
-	const orderData = getSiteStatsNormalizedData( state, site.ID, 'statsOrders', queries.orderQuery );
-	const visitorData = getSiteStatsNormalizedData(
-		state,
-		site.ID,
-		'statsVisits',
-		queries.visitorQuery
-	);
-	const productData = getSiteStatsNormalizedData(
-		state,
-		site.ID,
-		'statsStoreProductEvents',
-		queries.productQuery
-	);
+	const orderData = getSiteStatsNormalizedData( state, site.ID, 'statsOrders', orderQuery );
+	const visitorData = getSiteStatsNormalizedData( state, site.ID, 'statsVisits', visitorQuery );
 	const topEarnersData = getSiteStatsNormalizedData(
 		state,
 		site.ID,
 		'statsTopEarners',
-		queries.topEarnersQuery
+		topEarnersQuery
 	);
 	const referrerData = getSiteStatsNormalizedData(
 		state,
 		site.ID,
 		'statsStoreReferrers',
-		queries.referrerQuery
+		referrerQuery
 	);
 
 	return {
@@ -359,7 +344,6 @@ function mapStateToProps( state ) {
 		referrerData,
 		topEarnersData,
 		visitorData,
-		productData,
 	};
 }
 

@@ -337,22 +337,6 @@ UndocumentedSite.prototype.statsStoreReferrers = function( query ) {
 };
 
 /**
- * Requests Store product event stats
- *
- * @param {object} query query parameters
- * @return {Promise} A Promise to resolve when complete.
- */
-UndocumentedSite.prototype.statsStoreProductEvents = function( query ) {
-	return this.wpcom.req.get(
-		{
-			path: `/sites/${ this._id }/stats/events-by-product`,
-			apiNamespace: 'wpcom/v2',
-		},
-		query
-	);
-};
-
-/**
  * Requests Store top-sellers stats
  *
  * @param {object} query query parameters

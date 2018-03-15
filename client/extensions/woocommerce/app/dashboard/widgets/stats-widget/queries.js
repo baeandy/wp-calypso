@@ -17,7 +17,7 @@ export const getQueries = unit => {
 		date: getUnitPeriod( getStartDate( moment().format( 'YYYY-MM-DD' ), unit ), unit ),
 	};
 
-	const productAndOrderQuery = {
+	const orderQuery = {
 		...baseQuery,
 		quantity: UNITS[ unit ].quantity,
 	};
@@ -40,8 +40,7 @@ export const getQueries = unit => {
 	};
 
 	return {
-		productQuery: productAndOrderQuery,
-		orderQuery: productAndOrderQuery,
+		orderQuery,
 		referrerQuery,
 		topEarnersQuery,
 		visitorQuery,
